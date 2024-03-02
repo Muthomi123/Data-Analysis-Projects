@@ -103,3 +103,49 @@ Join [dbo].[CovidVaccinations] vac --Shortens the table name to Vac
 )
 Select *,(RollingPeopleVaccinated/population)*100 as PercentagePopulationVaccinated --New column called Percentage Population Vaccinated
 From PopvsVac
+
+
+-- Using Temp Table to perform Calculation on Partition By in previous query
+
+DROP Table if exists #PercentPopulationVaccinated
+Create Table #PercentPopulationVaccinated
+(
+Continent nvarchar(255),
+Location nvarchar(255),
+Date datetime,
+Population numeric,
+New_vaccinations numeric,
+RollingPeopleVaccinated numeric
+)
+
+Insert into #PercentPopulationVaccinated
+Select dea.continent,dea.location,dea.date,dea.population,vac.new_vaccinations,SUM(Convert(Float,vac.new_vaccinations))OVER(Partition by dea.location order by dea.location,dea.date)as RollingPeopleVaccinated
+From [dbo].['owid-covid-data (1)$'] dea --Shortens the table name to dea
+Join [dbo].[CovidVaccinations] vac --Shortens the table name to Vac
+  on dea.location = vac.location 
+  and dea.date = vac.date
+  WHERE dea.location like '%Kenya%'
+  --Where dea.continent is not null
+order by 2,3
+
+Select *, (RollingPeopleVaccinated/Population)*100 as percentagerollingVacinated
+From #PercentPopulationVaccinated
+
+
+
+
+-- Creating View to store data for later visualizations
+
+Create View PercentPopulationVaccinated as
+Select dea.continent,dea.location,dea.date,dea.population,vac.new_vaccinations,SUM(Convert(Float,vac.new_vaccinations))OVER(Partition by dea.location order by dea.location,dea.date)as RollingPeopleVaccinated
+From [dbo].['owid-covid-data (1)$'] dea --Shortens the table name to dea
+Join [dbo].[CovidVaccinations] vac --Shortens the table name to Vac
+  on dea.location = vac.location 
+  and dea.date = vac.date
+  WHERE dea.location like '%Kenya%'
+  --Where dea.continent is not null
+--order by 2,3
+
+
+
+
